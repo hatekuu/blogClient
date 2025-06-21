@@ -5,13 +5,7 @@ import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { getPostById } from '@/lib/api/posts';
 import type { Post } from '@/types/post';
-
-// Constants
-export const ERROR_MESSAGES = {
-  POST_NOT_FOUND: 'Không thể tải bài viết. Vui lòng thử lại.',
-  POST_INVALID: 'Bài viết không tồn tại.',
-  INVALID_ID: 'Invalid post ID.',
-};
+import { ERROR_MESSAGES } from '@/constants/errorMessages';
 
 // Skeleton Loader for Post
 // eslint-disable-next-line react/prop-types
