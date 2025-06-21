@@ -6,14 +6,15 @@ import Image from 'next/image';
 import { getPostById } from '@/lib/api/posts';
 import type { Post } from '@/types/post';
 
-// Loading Spinner Component
-const LoadingSpinner = () => (
-  <div className="flex justify-center items-center">
-    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-  </div>
-);
+// Constants
+export const ERROR_MESSAGES = {
+  POST_NOT_FOUND: 'Không thể tải bài viết. Vui lòng thử lại.',
+  POST_INVALID: 'Bài viết không tồn tại.',
+  INVALID_ID: 'Invalid post ID.',
+};
 
 // Skeleton Loader for Post
+// eslint-disable-next-line react/prop-types
 const PostSkeleton = () => (
   <div className="max-w-2xl mx-auto p-6 bg-white shadow-lg rounded-lg animate-pulse">
     <div className="h-8 bg-gray-200 rounded w-3/4 mb-4"></div>
@@ -21,7 +22,8 @@ const PostSkeleton = () => (
     <div className="h-4 bg-gray-200 rounded w-5/6 mb-4"></div>
     <div className="grid grid-cols-2 gap-2">
       {Array(2).fill(0).map((_, index) => (
-        <div key={index} className="h-32 bg-gray-200 rounded"></div>
+        // eslint-disable-next-line react/no-array-index-key
+        <div key={`skeleton-${index}`} className="h-32 bg-gray-200 rounded"></div>
       ))}
     </div>
   </div>
@@ -43,17 +45,21 @@ export default function PostDetailPage() {
         throw new Error('Post not found');
       }
       setPost(data);
-    } catch (err) {
-      console.error('Error fetching post:', err);
-      setError('Không thể tải bài viết. Vui lòng thử lại.');
+    } catch {
+      setError(ERROR_MESSAGES.POST_NOT_FOUND);
     } finally {
       setLoading(false);
     }
   }, [id]);
 
   useEffect(() => {
+    if (!id || typeof id !== 'string') {
+      setError(ERROR_MESSAGES.INVALID_ID);
+      setLoading(false);
+      return;
+    }
     fetchPost();
-  }, [fetchPost]);
+  }, [fetchPost, id]);
 
   if (loading) {
     return (
@@ -66,12 +72,11 @@ export default function PostDetailPage() {
   if (error || !post) {
     return (
       <div className="max-w-2xl mx-auto p-6 text-center">
-        <p className="text-red-600">{error || 'Bài viết không tồn tại.'}</p>
+        <p className="text-red-600">{error || ERROR_MESSAGES.POST_INVALID}</p>
       </div>
     );
   }
 
-  const postId = typeof post._id === 'string' ? post._id : post._id.$oid;
   const createdDate = new Date(
     typeof post.createdAt === 'string' ? post.createdAt : post.createdAt.$date
   ).toLocaleDateString('vi-VN', {
@@ -88,13 +93,13 @@ export default function PostDetailPage() {
         tạo: {createdDate}
       </p>
       <p className="text-gray-700 mb-6 leading-relaxed">{post.content}</p>
-      {post.img_url_list?.length > 0 && (
+      {post.img_url_list && post.img_url_list.length > 0 && (
         <div className="grid grid-cols-2 gap-4">
           {post.img_url_list.map((url, index) => (
             <div key={index} className="relative w-full h-48">
               <Image
                 src={url}
-                alt={`Image ${index + 1} for ${post.title}`}
+                alt={`Illustration ${index + 1} for post titled ${post.title}`}
                 fill
                 sizes="(max-width: 768px) 100vw, 50vw"
                 className="object-cover rounded-md shadow-sm"

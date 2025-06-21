@@ -1,12 +1,15 @@
 'use client';
+
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { getPostById, updatePost } from '@/lib/api/posts';
 import { extractPublicId } from '@/lib/extractImgid';
 import axios from 'axios';
+import type { Post } from '@/types/post';
 
 // Simple Loading Spinner Component
+// eslint-disable-next-line react/prop-types
 const LoadingSpinner = () => (
   <div className="flex justify-center items-center">
     <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
@@ -16,7 +19,7 @@ const LoadingSpinner = () => (
 export default function EditPostPage() {
   const { id } = useParams();
   const router = useRouter();
-  const [post, setPost] = useState<any>(null);
+  const [post, setPost] = useState<Post | null>(null);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [imgUrlList, setImgUrlList] = useState<string[]>([]);
@@ -39,7 +42,9 @@ export default function EditPostPage() {
         setIsLoading(false);
       }
     };
-    fetch();
+    if (id && typeof id === 'string') {
+      fetch();
+    }
   }, [id]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -55,7 +60,7 @@ export default function EditPostPage() {
       for (const file of images) {
         const formData = new FormData();
         formData.append('file', file);
-        const res = await axios.post('/api/upload', formData);
+        const res = await axios.post<{ url: string }>('/api/upload', formData);
         urls.push(res.data.url);
       }
     } catch (error) {
@@ -154,7 +159,7 @@ export default function EditPostPage() {
               >
                 <Image
                   src={url}
-                  alt="hinhanh"
+                  alt={`Image ${index + 1} for post titled ${title || 'post'}`}
                   fill
                   sizes="(max-width: 768px) 100vw, 50vw"
                   className="object-cover rounded-lg shadow-sm"

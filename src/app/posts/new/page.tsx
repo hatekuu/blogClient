@@ -8,6 +8,7 @@ import type { Post } from '@/types/post';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 
 // Loading Spinner Component
+// eslint-disable-next-line react/prop-types
 const LoadingSpinner = () => (
   <div className="flex justify-center items-center">
     <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-500"></div>
@@ -15,7 +16,7 @@ const LoadingSpinner = () => (
 );
 
 const CreatePostPage: React.FC = () => {
-  const [form, setForm] = useState<Omit<Post, 'img_url_list'>>({
+  const [form, setForm] = useState<Pick<Post, 'title' | 'content'>>({
     title: '',
     content: '',
   });
@@ -49,10 +50,10 @@ const CreatePostPage: React.FC = () => {
       for (const file of images) {
         const formData = new FormData();
         formData.append('file', file);
-        const res = await axios.post('/api/upload', formData);
+        const res = await axios.post<{ url: string }>('/api/upload', formData);
         urls.push(res.data.url);
       }
-    } catch (error) {
+    } catch {
       throw new Error('Failed to upload images');
     }
     return urls;
@@ -78,7 +79,7 @@ const CreatePostPage: React.FC = () => {
     setMessage('');
     try {
       const uploadedUrls = images.length > 0 ? await uploadImages() : [];
-      const newPost: Post = {
+      const newPost: Pick<Post, 'title' | 'content' | 'img_url_list'> = {
         ...form,
         img_url_list: uploadedUrls,
       };
@@ -157,7 +158,7 @@ const CreatePostPage: React.FC = () => {
                 <div key={index} className="relative w-full h-32">
                   <Image
                     src={url}
-                    alt={`Preview ${index}`}
+                    alt={`Preview ${index + 1}`}
                     fill
                     sizes="(max-width: 768px) 100vw, 50vw"
                     className="object-cover rounded-lg shadow-sm"

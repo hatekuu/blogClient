@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { login } from '@/lib/api';
-
+import { AxiosError } from 'axios';
 import { setUser } from '@/lib/userStorage';
 export default function LoginPage() {
   const [form, setForm] = useState({ username: '', password: '',userId:'' });
@@ -16,8 +16,10 @@ export default function LoginPage() {
   userId: userId,
 });
       window.location.href="/"
-    } catch (err) {
-      alert('Đăng nhập thất bại: ' + err?.response?.data?.message);
+    } catch (err: unknown) {
+      const error = err as AxiosError<{ message: string }>;
+      alert('Đăng nhập thất bại: ' + error.response?.data?.message);
+
     }
   };
 

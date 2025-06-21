@@ -4,6 +4,6 @@ export interface Post {
   title: string;
   content: string;
   img_url_list?: string[];
-  author?: { userId: string; username: string };
+  author?: { id: string; username: string };
   createdAt: string | { $date: string };
 }
