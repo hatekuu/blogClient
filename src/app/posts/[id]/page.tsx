@@ -86,22 +86,26 @@ export default function PostDetailPage() {
         Tác giả: <span className="font-medium">{post.author?.username || 'Không rõ'}</span> | Ngày
         tạo: {createdDate}
       </p>
-      <p className="text-gray-700 mb-6 leading-relaxed">{post.content}</p>
-      {post.img_url_list && post.img_url_list.length > 0 && (
-        <div className="grid grid-cols-2 gap-4">
-          {post.img_url_list.map((url, index) => (
-            <div key={index} className="relative w-full h-48">
-              <Image
-                src={url}
-                alt={`Illustration ${index + 1} for post titled ${post.title}`}
-                fill
-                sizes="(max-width: 768px) 100vw, 50vw"
-                className="object-cover rounded-md shadow-sm"
-                priority={index < 2}
-              />
+      {post.sections && post.sections.length > 0 ? (
+        <div className="space-y-6">
+          {post.sections.map(({ img_url, content }, index) => (
+            <div key={index} className="space-y-2">
+              <div className="relative w-full h-48">
+                <Image
+                  src={img_url}
+                  alt={`Illustration ${index + 1} for post titled ${post.title}`}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                  className="object-cover rounded-md shadow-sm"
+                  priority={index < 2}
+                />
+              </div>
+              <p className="text-gray-700 leading-relaxed">{content}</p>
             </div>
           ))}
         </div>
+      ) : (
+        <p className="text-gray-600">Không có nội dung hoặc hình ảnh.</p>
       )}
     </div>
   );

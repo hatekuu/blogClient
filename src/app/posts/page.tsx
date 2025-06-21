@@ -10,6 +10,7 @@ import type { Post } from '@/types/post';
 import type { User } from '@/types/user';
 
 // Loading Spinner Component
+// eslint-disable-next-line react/prop-types
 const LoadingSpinner = () => (
   <div className="flex justify-center items-center">
     <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-500"></div>
@@ -17,6 +18,7 @@ const LoadingSpinner = () => (
 );
 
 // Skeleton Loader for Posts
+// eslint-disable-next-line react/prop-types
 const PostSkeleton = () => (
   <li className="bg-white shadow p-4 rounded animate-pulse">
     <div className="w-full h-48 bg-gray-200 rounded mb-2"></div>
@@ -41,6 +43,7 @@ export default function PostListPage() {
       const data = await getAllPosts();
       setPosts(data);
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error('Error fetching posts:', err);
       setError('Không thể tải danh sách bài viết. Vui lòng thử lại.');
     } finally {
@@ -49,7 +52,7 @@ export default function PostListPage() {
   }, []);
 
   // Handle post deletion
-  const handleDelete = async (id: string, imageUrls: string[] = []) => {
+  const handleDelete = async (id: string, sections: Array<{ content: string; img_url: string }> = []) => {
     if (!confirm('Xác nhận xóa bài viết?')) return;
 
     setDeletingPostId(id);
@@ -58,8 +61,8 @@ export default function PostListPage() {
 
       // Delete associated images
       await Promise.all(
-        imageUrls.map(async (imageUrl) => {
-          const public_id = extractPublicId(imageUrl);
+        sections.map(async ({ img_url }) => {
+          const public_id = extractPublicId(img_url);
           if (public_id) {
             await fetch('/api/delete-image', {
               method: 'POST',
@@ -72,6 +75,7 @@ export default function PostListPage() {
 
       await fetchPosts();
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error('Xóa bài viết thất bại:', err);
       setError('Không thể xóa bài viết. Vui lòng thử lại.');
     } finally {
@@ -98,13 +102,12 @@ export default function PostListPage() {
         </Link>
       </div>
 
-      {error && (
-        <p className="text-red-600 text-center mb-4">{error}</p>
-      )}
+      {error && <p className="text-red-600 text-center mb-4">{error}</p>}
 
       {loading ? (
         <ul className="space-y-4">
           {Array(3).fill(0).map((_, index) => (
+            // eslint-disable-next-line react/no-array-index-key
             <PostSkeleton key={index} />
           ))}
         </ul>
@@ -121,27 +124,27 @@ export default function PostListPage() {
               month: '2-digit',
               year: 'numeric',
             });
-            const imageUrls = post.img_url_list || [];
+            const sections = post.sections || [];
 
             return (
               <li
                 key={postId}
                 className="bg-white shadow-md p-4 rounded-lg transform transition-all duration-200 hover:shadow-lg"
               >
-                {imageUrls.length > 0 && (
+                {sections.length > 0 && (
                   <div className="relative mb-4">
                     <Image
-                      src={imageUrls[0]}
-                      alt={post.title}
+                      src={sections[0].img_url}
+                      alt={`${post.title} - Image 1`}
                       width={800}
                       height={192}
                       className="w-full h-48 object-cover rounded-md"
                       sizes="(max-width: 768px) 100vw, 50vw"
                       priority={posts.indexOf(post) < 2}
                     />
-                    {imageUrls.length > 1 && (
+                    {sections.length > 1 && (
                       <span className="absolute bottom-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded">
-                        +{imageUrls.length - 1} ảnh
+                        +{sections.length - 1} ảnh
                       </span>
                     )}
                   </div>
@@ -153,12 +156,10 @@ export default function PostListPage() {
                   </h2>
                 </Link>
                 <p className="text-sm text-gray-600 line-clamp-2 mt-1">
-                  {post.content.slice(0, 100)}...
+                  {sections[0]?.content.slice(0, 100) || 'Không có nội dung'}...
                 </p>
                 <p className="text-xs text-gray-400 mt-2">
-                  Tác giả:{' '}
-                  <span className="font-medium">{post.author?.username || 'Không rõ'}</span> | Ngày
-                  tạo: {createdDate}
+                  Tác giả: <span className="font-medium">{post.author?.username || 'Không rõ'}</span> | Ngày tạo: {createdDate}
                 </p>
 
                 {user?.userId === post.author?.id && (
@@ -170,7 +171,7 @@ export default function PostListPage() {
                       Sửa
                     </Link>
                     <button
-                      onClick={() => handleDelete(postId, imageUrls)}
+                      onClick={() => handleDelete(postId, sections)}
                       className="text-red-500 hover:text-red-600 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors duration-200 flex items-center"
                       disabled={deletingPostId === postId}
                     >

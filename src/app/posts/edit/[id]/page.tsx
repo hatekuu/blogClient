@@ -3,204 +3,182 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
-import { getPostById, updatePost } from '@/lib/api/posts';
-import { extractPublicId } from '@/lib/extractImgid';
 import axios from 'axios';
+import { getPostById, updatePost } from '@/lib/api/posts';
 import type { Post } from '@/types/post';
 
-// Simple Loading Spinner Component
-// eslint-disable-next-line react/prop-types
 const LoadingSpinner = () => (
   <div className="flex justify-center items-center">
-    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-500"></div>
   </div>
 );
 
 export default function EditPostPage() {
   const { id } = useParams();
   const router = useRouter();
-  const [post, setPost] = useState<Post | null>(null);
+
   const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [imgUrlList, setImgUrlList] = useState<string[]>([]);
-  const [images, setImages] = useState<File[]>([]);
-  const [isLoading, setIsLoading] = useState(false); // For API calls
-  const [isUploading, setIsUploading] = useState(false); // For image uploads
+  const [sections, setSections] = useState<Post['sections']>([]);
+  const [newImages, setNewImages] = useState<(File | null)[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const fetch = async () => {
-      setIsLoading(true);
+    const fetchPost = async () => {
+      setLoading(true);
       try {
         const data = await getPostById(id as string);
-        setPost(data);
         setTitle(data.title || '');
-        setContent(data.content || '');
-        setImgUrlList(data.img_url_list || []);
+        setSections(data.sections || []);
       } catch (error) {
         console.error('Error fetching post:', error);
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
-    if (id && typeof id === 'string') {
-      fetch();
+
+    if (typeof id === 'string') {
+      fetchPost();
     }
   }, [id]);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setImages(Array.from(e.target.files));
-    }
+  const handleSectionChange = (index: number, field: 'content' | 'img_url', value: string) => {
+    setSections((prev) =>
+      prev.map((s, i) => (i === index ? { ...s, [field]: value } : s))
+    );
   };
 
-  const uploadImages = async () => {
-    setIsUploading(true);
-    const urls: string[] = [];
-    try {
-      for (const file of images) {
-        const formData = new FormData();
-        formData.append('file', file);
-        const res = await axios.post<{ url: string }>('/api/upload', formData);
-        urls.push(res.data.url);
-      }
-    } catch (error) {
-      console.error('Error uploading images:', error);
-    } finally {
-      setIsUploading(false);
-    }
-    return urls;
+  const handleImageChange = (index: number, file: File | null) => {
+    setNewImages((prev) => {
+      const updated = [...prev];
+      updated[index] = file;
+      return updated;
+    });
   };
 
-  const handleAddImgField = async () => {
-    if (images.length === 0) return;
-    const uploadedUrls = await uploadImages();
-    setImgUrlList((prev) => [...prev, ...uploadedUrls]);
-    setImages([]); // Reset after upload
-  };
-
-  const handleRemoveImgField = async (index: number, url: string) => {
-    setIsLoading(true);
-    try {
-      const public_id = extractPublicId(url);
-      if (public_id) {
-        await fetch('/api/delete-image', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ public_id }),
-        });
-      }
-      const updatedList = imgUrlList.filter((_, i) => i !== index);
-      setImgUrlList(updatedList);
-    } catch (error) {
-      console.error('Error removing image:', error);
-    } finally {
-      setIsLoading(false);
-    }
+  const uploadImage = async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await axios.post<{ url: string }>('/api/upload', formData);
+    return res.data.url;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setLoading(true);
+
     try {
+      const updatedSections = await Promise.all(
+        sections.map(async (section, i) => {
+          if (newImages[i]) {
+            const uploadedUrl = await uploadImage(newImages[i]!);
+            return { ...section, img_url: uploadedUrl };
+          }
+          return section;
+        })
+      );
+
       await updatePost(id as string, {
         title,
-        content,
-        img_url_list: imgUrlList.filter((url) => url.trim() !== ''),
+        sections: updatedSections,
       });
+
       router.push('/posts');
     } catch (error) {
       console.error('Error updating post:', error);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  if (!post) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <LoadingSpinner />
-        <span className="ml-4 text-gray-600">Đang tải...</span>
-      </div>
-    );
-  }
+  const addSection = () => {
+    setSections([...sections, { img_url: '', content: '' }]);
+    setNewImages([...newImages, null]);
+  };
+
+  const removeSection = (index: number) => {
+    const updatedSections = [...sections];
+    updatedSections.splice(index, 1);
+
+    const updatedImages = [...newImages];
+    updatedImages.splice(index, 1);
+
+    setSections(updatedSections);
+    setNewImages(updatedImages);
+  };
 
   return (
-    <div className="max-w-2xl mx-auto p-6 bg-white shadow-lg rounded-lg transform transition-all duration-300">
-      <h1 className="text-2xl font-bold mb-6 text-center text-gray-800">Sửa bài viết</h1>
+    <div className="max-w-2xl mx-auto p-6 bg-white shadow-md rounded-lg">
+      <h1 className="text-2xl font-bold text-center mb-6">Chỉnh sửa bài viết</h1>
+
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label className="block font-medium text-gray-700">Tiêu đề</label>
+          <label className="block font-medium text-gray-700 mb-1">Tiêu đề</label>
           <input
+            type="text"
+            className="w-full border p-3 rounded-md focus:ring-2 focus:ring-blue-400"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full p-3 border rounded-md focus:ring-2 focus:ring-blue-400 focus:outline-none transition-all duration-200"
-            placeholder="Nhập tiêu đề..."
+            required
           />
         </div>
 
-        <div>
-          <label className="block font-medium text-gray-700">Nội dung</label>
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            className="w-full p-3 border rounded-md focus:ring-2 focus:ring-blue-400 focus:outline-none transition-all duration-200"
-            rows={6}
-            placeholder="Nhập nội dung..."
-          />
-        </div>
-
-        <div>
-          <label className="block font-medium text-gray-700">Danh sách ảnh</label>
-          <div className="grid grid-cols-2 gap-4 mt-2">
-            {imgUrlList.map((url, index) => (
-              <div
-                key={index}
-                className="relative w-full h-32 group transform transition-all duration-300 hover:scale-105"
-              >
-                <Image
-                  src={url}
-                  alt={`Image ${index + 1} for post titled ${title || 'post'}`}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 50vw"
-                  className="object-cover rounded-lg shadow-sm"
-                  priority={index === 0}
-                />
-                <button
-                  type="button"
-                  onClick={() => handleRemoveImgField(index, url)}
-                  className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                  disabled={isLoading}
-                >
-                  {isLoading ? <LoadingSpinner /> : 'Xóa ảnh'}
-                </button>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4">
-            <input
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={handleImageChange}
-              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all duration-200"
+        {sections.map((section, index) => (
+          <div key={index} className="space-y-2 border border-gray-200 p-4 rounded-md relative">
+            <label className="block font-medium text-gray-700">Nội dung đoạn {index + 1}</label>
+            <textarea
+              className="w-full p-3 border rounded-md"
+              rows={4}
+              value={section.content}
+              onChange={(e) => handleSectionChange(index, 'content', e.target.value)}
+              required
             />
+
+            <div className="space-y-2">
+              <label className="block font-medium text-gray-700">Ảnh đoạn {index + 1}</label>
+              {section.img_url && (
+                <div className="relative w-full h-48">
+                  <Image
+                    src={section.img_url}
+                    alt={`Image section ${index + 1}`}
+                    fill
+                    className="object-cover rounded-md"
+                  />
+                </div>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) =>
+                  handleImageChange(index, e.target.files?.[0] || null)
+                }
+                className="block mt-2 text-sm text-gray-500"
+              />
+            </div>
+
             <button
               type="button"
-              onClick={handleAddImgField}
-              className="mt-2 text-blue-500 hover:text-blue-700 underline text-sm transition-colors duration-200"
-              disabled={isUploading || images.length === 0}
+              onClick={() => removeSection(index)}
+              className="absolute top-2 right-2 text-red-500 hover:text-red-700 text-sm"
             >
-              {isUploading ? <LoadingSpinner /> : 'Upload ảnh'}
+              Xóa đoạn
             </button>
           </div>
-        </div>
+        ))}
+
+        <button
+          type="button"
+          onClick={addSection}
+          className="w-full text-blue-600 border border-blue-600 rounded-md px-4 py-2 hover:bg-blue-50 transition"
+        >
+          + Thêm đoạn mới
+        </button>
 
         <button
           type="submit"
-          className="w-full bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 focus:ring-2 focus:ring-green-400 focus:outline-none transition-all duration-200 flex justify-center items-center"
-          disabled={isLoading}
+          className="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition"
+          disabled={loading}
         >
-          {isLoading ? <LoadingSpinner /> : 'Cập nhật'}
+          {loading ? <LoadingSpinner /> : 'Cập nhật bài viết'}
         </button>
       </form>
     </div>
