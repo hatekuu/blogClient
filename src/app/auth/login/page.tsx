@@ -6,7 +6,7 @@ import { setUser } from '@/lib/userStorage';
 export default function LoginPage() {
   const [form, setForm] = useState({ username: '', password: '',userId:'' });
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
       const { token, username,userId } = await login(form);
