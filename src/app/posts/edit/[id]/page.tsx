@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import axios from 'axios';
 import { getPostById, updatePost } from '@/lib/api/posts';
 import type { Post } from '@/types/post';
+import { extractPublicId } from '@/lib/extractImgid';
 
 const LoadingSpinner = () => (
   <div className="flex justify-center items-center">
@@ -21,7 +22,7 @@ export default function EditPostPage() {
   const [sections, setSections] = useState<Post['sections']>([]);
   const [newImages, setNewImages] = useState<(File | null)[]>([]);
   const [loading, setLoading] = useState(false);
-
+const [isDirty, setIsDirty] = useState(false);
   useEffect(() => {
     const fetchPost = async () => {
       setLoading(true);
@@ -40,8 +41,25 @@ export default function EditPostPage() {
       fetchPost();
     }
   }, [id]);
+  useEffect(() => {
+  const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+    if (isDirty) {
+      e.preventDefault();
+      e.returnValue = ''; // Chrome & Firefox need this for confirmation
+    }
+  };
+
+  window.addEventListener('beforeunload', handleBeforeUnload);
+
+  return () => {
+    window.removeEventListener('beforeunload', handleBeforeUnload);
+  };
+}, [isDirty]);
+
 
   const handleSectionChange = (index: number, field: 'content' | 'img_url', value: string) => {
+      setIsDirty(true);
+
     setSections((prev) =>
       prev.map((s, i) => (i === index ? { ...s, [field]: value } : s))
     );
@@ -51,6 +69,8 @@ export default function EditPostPage() {
     setNewImages((prev) => {
       const updated = [...prev];
       updated[index] = file;
+        setIsDirty(true);
+
       return updated;
     });
   };
@@ -61,6 +81,16 @@ export default function EditPostPage() {
     const res = await axios.post<{ url: string }>('/api/upload', formData);
     return res.data.url;
   };
+const deleteImage = async (public_id: string) => {
+  type DeleteImageResponse = {
+  result: 'ok' | 'not found' | string;
+};
+
+  const res = await axios.post<{ result: DeleteImageResponse }>('/api/delete-image', {
+    public_id,
+  });
+  return res.data.result;
+};
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,16 +125,33 @@ export default function EditPostPage() {
     setNewImages([...newImages, null]);
   };
 
-  const removeSection = (index: number) => {
-    const updatedSections = [...sections];
-    updatedSections.splice(index, 1);
+  const removeSection = async (index: number) => {
+  const updatedSections = [...sections];
+  const [removedSection] = updatedSections.splice(index, 1);
+  const updatedImages = [...newImages];
+  updatedImages.splice(index, 1);
 
-    const updatedImages = [...newImages];
-    updatedImages.splice(index, 1);
+  try {
+    const publicId = extractPublicId(removedSection.img_url);
+    if (publicId) {
+      await deleteImage(publicId);
+    } else {
+      console.warn('❗ Không thể extract public_id từ URL ảnh');
+    }
 
-    setSections(updatedSections);
-    setNewImages(updatedImages);
-  };
+    // ✅ Cập nhật lại bài viết sau khi xóa section
+    await updatePost(id as string, {
+      title,
+      sections: updatedSections,
+    });
+  } catch (err) {
+    console.error('Image deletion or update failed:', err);
+  }
+
+  setSections(updatedSections);
+  setNewImages(updatedImages);
+};
+
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-white shadow-md rounded-lg">
@@ -117,7 +164,11 @@ export default function EditPostPage() {
             type="text"
             className="w-full border p-3 rounded-md focus:ring-2 focus:ring-blue-400"
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => {
+      setTitle(e.target.value);
+      setIsDirty(true);
+    }}
+
             required
           />
         </div>

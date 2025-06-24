@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { getPostById } from '@/lib/api/posts';
 import type { Post } from '@/types/post';
 import { ERROR_MESSAGES } from '@/constants/errorMessages';
+import { getProfile } from '@/lib/api/auth';
 
 // Skeleton Loader for Post
 // eslint-disable-next-line react/prop-types
@@ -35,6 +36,7 @@ export default function PostDetailPage() {
     setError(null);
     try {
       const data = await getPostById(id as string);
+      await getProfile()
       if (!data) {
         throw new Error('Post not found');
       }

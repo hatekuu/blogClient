@@ -9,7 +9,8 @@ cloudinary.config({
 });
 
 export async function POST(req: Request) {
-  const { public_id } = await req.json();
+  const body = await req.json();
+  const public_id = body?.public_id;
 
   if (!public_id) {
     return NextResponse.json({ error: 'Missing public_id' }, { status: 400 });
@@ -23,6 +24,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ message: 'Image deleted successfully', result });
   } catch (err) {
+    console.error('Cloudinary delete error:', err);
     return NextResponse.json({ error: 'Server error', detail: err }, { status: 500 });
   }
 }
