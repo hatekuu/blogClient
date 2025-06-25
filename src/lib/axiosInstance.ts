@@ -26,7 +26,21 @@ function isPublicPath(path: string) {
 }
 
 instance.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (typeof window !== 'undefined') {
+      const currentPath = window.location.pathname;
+
+      // ✅ Nếu đang ở trang public (login/register) và token hợp lệ → redirect về "/"
+      const isAuthPage = currentPath === '/auth/login' || currentPath === '/auth/register';
+      const user = getUser();
+
+      if (user?.token && isAuthPage) {
+        window.location.href = '/';
+      }
+    }
+
+    return response;
+  },
   (error: AxiosError<{ message?: string }>) => {
     const message = error.response?.data?.message;
     const tokenErrors = ['Token is blacklisted', 'Invalid token', 'No token provided'];
@@ -45,6 +59,7 @@ instance.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
 
 
 export default instance;
