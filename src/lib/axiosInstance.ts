@@ -14,8 +14,17 @@ instance.interceptors.request.use((config) => {
   }
   return config;
 });
+function isPublicPath(path: string) {
+  return (
+    path === '/' ||
+    path === '/posts' ||
+    path === '/auth/login' ||
+    path === '/auth/register' ||
+   /^\/posts\/(?!new$)[^/]+$/.test(path)
 
-// ✅ Xử lý lỗi token toàn cục
+  );
+}
+
 instance.interceptors.response.use(
   (response) => response,
   (error: AxiosError<{ message?: string }>) => {
@@ -24,13 +33,18 @@ instance.interceptors.response.use(
 
     if (message && tokenErrors.includes(message)) {
       if (typeof window !== 'undefined') {
-        removeUser();
-        window.location.href = '/';
+        const currentPath = window.location.pathname;
+
+        if (!isPublicPath(currentPath)) {
+          removeUser();
+          window.location.href = '/';
+        }
       }
     }
 
     return Promise.reject(error);
   }
 );
+
 
 export default instance;

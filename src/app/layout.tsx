@@ -1,7 +1,7 @@
 // app/layout.tsx
+import ClientNav from '@/components/ClientNav';
 import './globals.css';
 import Link from 'next/link';
-import ClientOnlyNavWrapper from '@/components/ClientOnlyNavWrapper';
 
 export const metadata = {
   title: 'Blog App',
@@ -24,7 +24,7 @@ export default function RootLayout({
             <Link href="/" className="text-xl font-bold text-blue-600">
               BlogApp
             </Link>
-            <ClientOnlyNavWrapper />
+        <ClientNav/>
           </div>
         </nav>
         <main className="h-full w-full">{children}</main>

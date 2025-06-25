@@ -86,7 +86,10 @@ export default function PostListPage() {
   // Initialize user and fetch posts
   useEffect(() => {
     const storedUser = getUser();
-    setUser(storedUser);
+    if(storedUser){
+ setUser(storedUser);
+    }
+   
     fetchPosts();
   }, [fetchPosts]);
 
@@ -94,13 +97,15 @@ export default function PostListPage() {
     <div className="max-w-4xl mx-auto px-6 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800">Danh sách bài viết</h1>
-        <Link
-          href="/posts/new"
-          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-all duration-200"
-        >
-          + Tạo bài viết
-        </Link>
-      </div>
+        {user?.userId&&(
+          <Link
+            href="/posts/new"
+            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-all duration-200"
+          >
+            + Tạo bài viết
+          </Link>
+        )} 
+        </div>
 
       {error && <p className="text-red-600 text-center mb-4">{error}</p>}
 

@@ -1,11 +1,17 @@
 'use client';
+import dynamic from 'next/dynamic';
 
 import React, { useState } from 'react';
 import axios from 'axios';
 import Image from 'next/image';
 import { createPost } from '@/lib/api/posts';
 import type { CreatePostInput } from '@/types/post';
-import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
+import { EmojiClickData } from 'emoji-picker-react';
+
+const EmojiPicker = dynamic(() => import('emoji-picker-react'), {
+  ssr: false,
+  loading: () => <p>Đang tải emoji...</p>,
+});
 
 const LoadingSpinner = () => (
   <div className="flex justify-center items-center">
@@ -46,7 +52,7 @@ const CreatePostPage: React.FC = () => {
     const updatedSections = [...sections];
     updatedSections[index].content += emojiData.emoji;
     setSections(updatedSections);
-    setShowEmojiPicker(null);
+    // setShowEmojiPicker(null);
   };
 
   const addSection = () => {
@@ -115,7 +121,7 @@ const handleSubmit = async (e: React.FormEvent) => {
   return (
     <div className="max-w-3xl mx-auto p-6 bg-white shadow-lg rounded-lg">
       <h1 className="text-2xl font-bold mb-6 text-center">Tạo bài viết</h1>
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6" >
         <div>
           <label className="block font-medium text-gray-700">Tiêu đề</label>
           <input
@@ -149,7 +155,7 @@ const handleSubmit = async (e: React.FormEvent) => {
               😊
             </button>
             {showEmojiPicker === index && (
-              <div className="absolute z-10 mt-2">
+              <div className="absolute z-10 top-4 right-[-48%]">
                 <EmojiPicker onEmojiClick={(e) => handleEmojiClick(e, index)} />
               </div>
             )}

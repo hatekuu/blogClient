@@ -1,11 +1,7 @@
 // lib/userStorage.ts
 'use client'; // Đảm bảo file này chỉ dùng trong client components
 
-export interface User {
-  token: string;
-  username: string;
-  userId: string;
-}
+import { User } from "@/types/user";
 
 const USER_KEY = 'user';
 
@@ -15,18 +11,16 @@ export const setUser = (user: User) => {
   }
 };
 
-export const getUser = (): User | null => {
+export function getUser(): User | null {
   if (typeof window === 'undefined') return null;
 
-  const userStr = localStorage.getItem(USER_KEY);
-  if (!userStr) return null;
-
   try {
-    return JSON.parse(userStr) as User;
-  } catch {
+    const userJson = localStorage.getItem(USER_KEY);
+    return userJson ? JSON.parse(userJson) as User : null;
+  } catch  {
     return null;
   }
-};
+}
 
 export const removeUser = () => {
   if (typeof window !== 'undefined') {
